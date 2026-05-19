@@ -9,7 +9,9 @@ export const monthsList = [
 ];
 
 export const AppProvider = ({ children }) => {
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return localStorage.getItem('isAdmin') === 'true';
+  });
   const [members, setMembers] = useState([]);
   const [ledger, setLedger] = useState({});
   const [loading, setLoading] = useState(true);
@@ -39,11 +41,18 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = (password) => {
-    if (password === 'admin123') { setIsAdmin(true); return true; }
+    if (password === 'admin123') {
+      setIsAdmin(true);
+      localStorage.setItem('isAdmin', 'true');
+      return true;
+    }
     return false;
   };
 
-  const logout = () => setIsAdmin(false);
+  const logout = () => {
+    setIsAdmin(false);
+    localStorage.removeItem('isAdmin');
+  };
 
   // ── Ledger update ─────────────────────────────────────────────────────────
   const updateLedger = async (memberId, monthIndex, field, value) => {
