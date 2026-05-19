@@ -41,7 +41,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   const login = (password) => {
-    if (password === 'admin123') {
+    if (password === 'Shubham@6682') {
       setIsAdmin(true);
       localStorage.setItem('isAdmin', 'true');
       return true;
