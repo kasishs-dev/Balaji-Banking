@@ -51,7 +51,7 @@ const MonthView = () => {
     <Box>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
-          {monthName} Ledger
+          {monthName} Collection
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Detailed view of contributions for {monthName} {currentYear}.

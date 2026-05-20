@@ -14,10 +14,10 @@ const Footer = () => {
           gap: 1.5,
         }}>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: { xs: '0.75rem', sm: '0.85rem' } }}>
-            © {new Date().getFullYear()} Balaji Banking Circle. All rights reserved.
+            © {new Date().getFullYear()} Balaji Hanuman Banking. All rights reserved.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, color: 'primary.main', fontSize: { xs: '0.75rem', sm: '0.85rem' } }}>
-            Made with ❤️ for Balaji Circle
+            Developed by Shubham Bagthaliya
           </Typography>
         </Box>
       </Container>
