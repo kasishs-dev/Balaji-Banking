@@ -31,7 +31,10 @@ const Layout = () => {
     }
   };
 
-  const drawerWidth = sidebarCollapsed ? 72 : 280;
+  // Different drawer widths for mobile and desktop
+  const desktopDrawerWidth = sidebarCollapsed ? 72 : 280;
+  const mobileDrawerWidth = 180; // Smaller width for mobile
+  const drawerWidth = isMobile ? mobileDrawerWidth : desktopDrawerWidth;
 
   // Loading Screen Component
   const LoadingScreen = () => (
@@ -125,7 +128,7 @@ const Layout = () => {
           flexGrow: 1,
           p: { xs: 2, sm: 3 },
           backgroundColor: "background.default",
-          width: { xs: "100%", md: `calc(100% - ${drawerWidth}px)` },
+          width: { xs: "100%", md: `calc(100% - ${desktopDrawerWidth}px)` },
           minWidth: 0,
           display: "flex",
           flexDirection: "column",

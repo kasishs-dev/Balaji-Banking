@@ -48,6 +48,7 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
   const [addYearOpen, setAddYearOpen] = useState(false);
   const [newYear, setNewYear] = useState('');
   const [yearError, setYearError] = useState('');
+  const [imageError, setImageError] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -78,130 +79,200 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
+          backgroundColor: { xs: '#0F172A', md: 'background.paper' },
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', py: 1, gap: 1, minHeight: { xs: 56, sm: 64 } }}>
-          {/* Left side: Hamburger (mobile) + Title (mobile) / Metric cards (desktop) */}
-          <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden', flex: 1, gap: 0.5 }}>
-            {/* Hamburger menu / Arrow Icon */}
-            <IconButton edge="start" onClick={onMenuClick} sx={{ color: 'text.primary', mr: 1, flexShrink: 0 }}>
-              {isMobile ? <MenuIcon /> : (collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />)}
-            </IconButton>
+          
+          {/* Mobile View */}
+          {isMobile ? (
+            <>
+              {/* Left side: Menu Icon + Logo and Name */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton edge="start" onClick={onMenuClick} sx={{ color: '#fff' }}>
+                  <MenuIcon />
+                </IconButton>
 
-            {/* Mobile Title */}
-            <Typography 
-              variant="subtitle1" 
-              sx={{ 
-                fontWeight: 800, 
-                color: 'primary.main', 
-                display: { xs: 'block', md: 'none' },
-                letterSpacing: 0.5,
-                mr: 1.5,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              BALAJI POOL
-            </Typography>
-
-            {/* Desktop Metric Cards Row */}
-            <Box sx={{
-              display: { xs: 'none', md: 'flex' },
-              alignItems: 'center',
-              gap: 0,
-              flexShrink: 1,
-            }}>
-              <MetricCard
-                title="Total Goal"
-                value={metrics.totalGoal}
-                icon={<AccountBalanceWalletIcon />}
-                gradient="linear-gradient(135deg, #BF360C 0%, #3E2723 100%)"
-              />
-              <MetricCard
-                title="Collected"
-                value={metrics.collectedSoFar}
-                icon={<TrendingUpIcon />}
-                gradient="linear-gradient(135deg, #FF9800 0%, #F57C00 100%)"
-              />
-
-              {/* Progress bar */}
-              <Box sx={{ ml: 2, width: 180, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>Goal Progress</Typography>
-                  <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                    {metrics.percentAchieved.toFixed(1)}%
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box
+                    sx={{
+                      backgroundColor: '#FFE0B2',
+                      borderRadius: '8px',
+                      p: 0.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <img
+                      src="/logo.png"
+                      alt="Logo"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        objectFit: 'contain',
+                        display: 'block',
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <Typography
+                      sx={{
+                        display: 'none',
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        color: '#FF9800',
+                      }}
+                    >
+                      B
+                    </Typography>
+                  </Box>
+                  <Typography 
+                    variant="subtitle1" 
+                    sx={{ 
+                      fontWeight: 800, 
+                      color: '#fff',
+                      letterSpacing: 0.5,
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    BALAJI BANKING
                   </Typography>
                 </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={Math.min(metrics.percentAchieved, 100)}
-                  sx={{
-                    height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)',
-                    '& .MuiLinearProgress-bar': {
-                      background: metrics.percentAchieved >= 100
-                        ? 'linear-gradient(90deg, #00E676 0%, #00C853 100%)'
-                        : 'linear-gradient(90deg, #FFB74D 0%, #FF9800 100%)'
-                    }
-                  }}
-                />
               </Box>
-            </Box>
 
-            {/* Year Selector (Always Visible) */}
-            <Box sx={{ display: 'flex', alignItems: 'center', ml: { xs: 'auto', md: 2 }, mr: { xs: 1, md: 0 }, gap: 1, flexShrink: 0 }}>
-              <CalendarTodayIcon sx={{ color: 'text.secondary', fontSize: 18, display: { xs: 'none', sm: 'block' } }} />
-              <FormControl size="small" sx={{ minWidth: 80 }}>
-                <Select
-                  value={currentYear}
-                  onChange={(e) => setCurrentYear(e.target.value)}
-                  sx={{ borderRadius: 2, fontWeight: 600 }}
-                >
-                  {availableYears.map(y => (
-                    <MenuItem key={y} value={y}>{y}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              {isAdmin && (
-                <Tooltip title="Add new year">
-                  <IconButton
-                    size="small"
-                    onClick={() => setAddYearOpen(true)}
-                    sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+              {/* Right side: Year Selector and Logout */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <FormControl size="small" sx={{ minWidth: 80 }}>
+                  <Select
+                    value={currentYear}
+                    onChange={(e) => setCurrentYear(e.target.value)}
+                    sx={{ 
+                      borderRadius: 2, 
+                      fontWeight: 600,
+                      color: '#fff',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255,255,255,0.3)'
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: '#fff'
+                      }
+                    }}
                   >
-                    <AddIcon fontSize="small" />
+                    {availableYears.map(y => (
+                      <MenuItem key={y} value={y}>{y}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                
+                {isAdmin && (
+                  <IconButton
+                    color="error"
+                    onClick={logout}
+                    sx={{ color: '#fff' }}
+                  >
+                    <LogoutIcon />
                   </IconButton>
-                </Tooltip>
-              )}
-            </Box>
-          </Box>
+                )}
+              </Box>
+            </>
+          ) : (
+            /* Desktop View - No menu icon */
+            <>
+              <Box sx={{ display: 'flex', alignItems: 'center', overflow: 'hidden', flex: 1, gap: 0.5 }}>
+                <IconButton edge="start" onClick={onMenuClick} sx={{ color: 'text.primary', mr: 1, flexShrink: 0 }}>
+                  {collapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+                </IconButton>
 
-          {/* Right side: Logout */}
-          <Box sx={{ flexShrink: 0 }}>
-            {isAdmin && (
-              <Button
-                variant="outlined"
-                color="error"
-                startIcon={<LogoutIcon />}
-                onClick={logout}
-                size="small"
-                sx={{
-                  borderRadius: 8, borderWidth: 2,
-                  '&:hover': { borderWidth: 2 },
-                  display: { xs: 'none', sm: 'inline-flex' }
-                }}
-              >
-                Exit Admin Mode
-              </Button>
-            )}
-            {isAdmin && (
-              <IconButton
-                color="error"
-                onClick={logout}
-                sx={{ display: { xs: 'flex', sm: 'none' } }}
-              >
-                <LogoutIcon />
-              </IconButton>
-            )}
-          </Box>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0,
+                  flexShrink: 1,
+                }}>
+                  <MetricCard
+                    title="Total Goal"
+                    value={metrics.totalGoal}
+                    icon={<AccountBalanceWalletIcon />}
+                    gradient="linear-gradient(135deg, #BF360C 0%, #3E2723 100%)"
+                  />
+                  <MetricCard
+                    title="Collected"
+                    value={metrics.collectedSoFar}
+                    icon={<TrendingUpIcon />}
+                    gradient="linear-gradient(135deg, #FF9800 0%, #F57C00 100%)"
+                  />
+
+                  <Box sx={{ ml: 2, width: 180, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                      <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>Goal Progress</Typography>
+                      <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                        {metrics.percentAchieved.toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(metrics.percentAchieved, 100)}
+                      sx={{
+                        height: 8, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.05)',
+                        '& .MuiLinearProgress-bar': {
+                          background: metrics.percentAchieved >= 100
+                            ? 'linear-gradient(90deg, #00E676 0%, #00C853 100%)'
+                            : 'linear-gradient(90deg, #FFB74D 0%, #FF9800 100%)'
+                        }
+                      }}
+                    />
+                  </Box>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', ml: 2, gap: 1, flexShrink: 0 }}>
+                  <CalendarTodayIcon sx={{ color: 'text.secondary', fontSize: 18 }} />
+                  <FormControl size="small" sx={{ minWidth: 80 }}>
+                    <Select
+                      value={currentYear}
+                      onChange={(e) => setCurrentYear(e.target.value)}
+                      sx={{ borderRadius: 2, fontWeight: 600 }}
+                    >
+                      {availableYears.map(y => (
+                        <MenuItem key={y} value={y}>{y}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  {isAdmin && (
+                    <Tooltip title="Add new year">
+                      <IconButton
+                        size="small"
+                        onClick={() => setAddYearOpen(true)}
+                        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </Box>
+
+              <Box sx={{ flexShrink: 0 }}>
+                {isAdmin && (
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<LogoutIcon />}
+                    onClick={logout}
+                    size="small"
+                    sx={{
+                      borderRadius: 8, borderWidth: 2,
+                      '&:hover': { borderWidth: 2 },
+                    }}
+                  >
+                    Exit Admin Mode
+                  </Button>
+                )}
+              </Box>
+            </>
+          )}
         </Toolbar>
       </AppBar>
 

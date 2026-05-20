@@ -18,7 +18,7 @@ import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useNavigate, useLocation } from "react-router-dom";
 import { monthsList } from "../context/AppContext";
 
-const DrawerContent = ({ onItemClick, collapsed }) => {
+const DrawerContent = ({ onItemClick, collapsed, isMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -65,18 +65,58 @@ const DrawerContent = ({ onItemClick, collapsed }) => {
             />
           </Box>
           {!collapsed && (
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 800,
-                letterSpacing: 0.5,
-                color: "#fff",
-                whiteSpace: "nowrap",
-                textShadow: "0 2px 4px rgba(0,0,0,0.2)",
-              }}
-            >
-              BALAJI BANKING
-            </Typography>
+            <>
+              {/* Mobile View: Stacked text */}
+              {isMobile ? (
+                <Box
+                  sx={{
+                    display: "flex",
+                    flexDirection: "column",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 800,
+                      letterSpacing: 0.5,
+                      color: "#fff",
+                      textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                      fontSize: " 1.1rem",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    BALAJI
+                  </Typography>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      fontWeight: 600,
+                      letterSpacing: 0.5,
+                      color: "#FF9800",
+                      fontSize: " 1rem",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    BANKING
+                  </Typography>
+                </Box>
+              ) : (
+                /* Desktop View: Single line text */
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 800,
+                    letterSpacing: 0.5,
+                    color: "#fff",
+                    whiteSpace: "nowrap",
+                    textShadow: "0 2px 4px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  BALAJI BANKING
+                </Typography>
+              )}
+            </>
           )}
         </Box>
       </Toolbar>
@@ -165,14 +205,19 @@ const DrawerContent = ({ onItemClick, collapsed }) => {
   );
 };
 
-const Sidebar = ({ mobileOpen, onClose, collapsed, drawerWidth = 240 }) => {
+const Sidebar = ({ mobileOpen, onClose, collapsed, drawerWidth = 280 }) => {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
+  // Use smaller width for mobile drawer
+  const mobileDrawerWidth = 220; // Adjust as needed
+  const finalDrawerWidth = isMobile ? mobileDrawerWidth : drawerWidth;
 
   return (
     <Box
       component="nav"
       sx={{
-        width: { md: drawerWidth },
+        width: { md: finalDrawerWidth },
         flexShrink: { md: 0 },
         transition: theme.transitions.create("width", {
           easing: theme.transitions.easing.sharp,
@@ -188,10 +233,18 @@ const Sidebar = ({ mobileOpen, onClose, collapsed, drawerWidth = 240 }) => {
         ModalProps={{ keepMounted: true }}
         sx={{
           display: { xs: "block", md: "none" },
-          [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box" },
+          [`& .MuiDrawer-paper`]: {
+            width: mobileDrawerWidth,
+            boxSizing: "border-box",
+            backgroundColor: "#0F172A",
+          },
         }}
       >
-        <DrawerContent onItemClick={onClose} collapsed={false} />
+        <DrawerContent
+          onItemClick={onClose}
+          collapsed={false}
+          isMobile={true}
+        />
       </Drawer>
 
       {/* Desktop: Permanent Drawer */}
@@ -200,10 +253,11 @@ const Sidebar = ({ mobileOpen, onClose, collapsed, drawerWidth = 240 }) => {
         sx={{
           display: { xs: "none", md: "block" },
           [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
+            width: finalDrawerWidth,
             boxSizing: "border-box",
             borderRight: "none",
             overflowX: "hidden",
+            backgroundColor: "#0F172A",
             transition: theme.transitions.create("width", {
               easing: theme.transitions.easing.sharp,
               duration: theme.transitions.duration.enteringScreen,
@@ -212,7 +266,7 @@ const Sidebar = ({ mobileOpen, onClose, collapsed, drawerWidth = 240 }) => {
         }}
         open
       >
-        <DrawerContent collapsed={collapsed} />
+        <DrawerContent collapsed={collapsed} isMobile={false} />
       </Drawer>
     </Box>
   );
