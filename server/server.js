@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import { connectDB, Member, Expense, Ledger, AvailableYear } from './db.js';
+import { connectDB, Member, Expense, Ledger, AvailableYear, TempleFund } from './db.js';
 
 const app = express();
 const PORT = 5000;
@@ -32,7 +32,9 @@ app.get('/api/data', async (req, res) => {
       };
     }
 
-    res.json({ availableYears, members: members.map(m => m.toJSON()), expenses: expenses.map(e => e.toJSON()), ledger });
+    const templeFunds = await TempleFund.find();
+
+    res.json({ availableYears, members: members.map(m => m.toJSON()), expenses: expenses.map(e => e.toJSON()), templeFunds: templeFunds.map(t => t.toJSON()), ledger });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -86,6 +88,68 @@ app.delete('/api/expenses/:id', async (req, res) => {
   try {
     const result = await Expense.findByIdAndDelete(req.params.id);
     if (!result) return res.status(404).json({ error: 'Expense not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ── GET temple funds ─────────────────────────────────────────────────────────
+app.get('/api/temple-funds', async (req, res) => {
+  try {
+    const { year } = req.query;
+    const funds = year ? await TempleFund.find({ year: parseInt(year, 10) }) : await TempleFund.find();
+    res.json(funds.map(t => t.toJSON()));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ── POST add a temple fund entry ──────────────────────────────────────────────
+app.post('/api/temple-funds', async (req, res) => {
+  try {
+    const { memberId, memberName, amount, date, year } = req.body;
+    if (!memberId || !memberName || amount === undefined || !year) {
+      return res.status(400).json({ error: 'memberId, memberName, amount, and year are required' });
+    }
+    const entry = await TempleFund.create({
+      memberId,
+      memberName,
+      amount: Number(amount),
+      date: date || new Date().toISOString().split('T')[0],
+      year: parseInt(year, 10)
+    });
+    res.json({ success: true, fund: entry.toJSON() });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ── PUT edit a temple fund entry ──────────────────────────────────────────────
+app.put('/api/temple-funds/:id', async (req, res) => {
+  try {
+    const { memberId, memberName, amount, date } = req.body;
+    const entry = await TempleFund.findByIdAndUpdate(
+      req.params.id,
+      { memberId, memberName, amount: Number(amount), date },
+      { new: true }
+    );
+    if (!entry) return res.status(404).json({ error: 'Entry not found' });
+    res.json({ success: true, fund: entry.toJSON() });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+// ── DELETE a temple fund entry ────────────────────────────────────────────────
+app.delete('/api/temple-funds/:id', async (req, res) => {
+  try {
+    const result = await TempleFund.findByIdAndDelete(req.params.id);
+    if (!result) return res.status(404).json({ error: 'Entry not found' });
     res.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -155,9 +219,13 @@ app.post('/api/ledger', async (req, res) => {
     }
 
     // Upsert: create if not exists, then update the specific field
+    const defaultValues = { base: 100, birthday: 0, status: 'Pending', source: 'Cash', paidDate: null };
+    // Remove the field being updated from defaults so there's no conflict in $setOnInsert
+    delete defaultValues[dbField];
+
     const updatedEntry = await Ledger.findOneAndUpdate(
       { year, memberId: memberId.toString(), monthIndex },
-      { $set: { [dbField]: value }, $setOnInsert: { base: 100, birthday: 0, status: 'Pending', source: 'Cash', paidDate: null } },
+      { $set: { [dbField]: value }, $setOnInsert: defaultValues },
       { upsert: true, new: true }
     );
 

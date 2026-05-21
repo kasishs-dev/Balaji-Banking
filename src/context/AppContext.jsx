@@ -8,6 +8,13 @@ export const monthsList = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+// Returns [{name, index}] for months visible in a given year.
+// For 2026 the group started in April, so only show April–December.
+export const getMonthsForYear = (year) => {
+  const startIndex = year === 2026 ? 3 : 0; // 3 = April
+  return monthsList.slice(startIndex).map((name, i) => ({ name, index: startIndex + i }));
+};
+
 export const AppProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(() => {
     return localStorage.getItem('isAdmin') === 'true';
@@ -18,6 +25,7 @@ export const AppProvider = ({ children }) => {
   const [availableYears, setAvailableYears] = useState([]);
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [expenses, setExpenses] = useState([]);
+  const [templeFunds, setTempleFunds] = useState([]);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/data`)
@@ -27,10 +35,12 @@ export const AppProvider = ({ children }) => {
           setMembers(data.members);
           setLedger(data.ledger);
           setExpenses(data.expenses || []);
+          setTempleFunds(data.templeFunds || []);
           const years = data.availableYears || [new Date().getFullYear()];
           setAvailableYears(years);
-          // Default to the latest year
-          setCurrentYear(years[years.length - 1]);
+          // Default to the current calendar year if present, otherwise the latest year
+          const calYear = new Date().getFullYear();
+          setCurrentYear(years.includes(calYear) ? calYear : years[years.length - 1]);
         }
         setLoading(false);
       })
@@ -152,8 +162,15 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // ── Display months for current year ─────────────────────────────────────
+  const displayMonths = useMemo(() => getMonthsForYear(currentYear), [currentYear]);
+
   // ── Derived metrics (scoped to currentYear) ───────────────────────────────
   const metrics = useMemo(() => {
+    // Active months for the selected year (April–Dec for 2026, Jan–Dec otherwise)
+    const activeMonths = getMonthsForYear(currentYear);
+    const activeMonthIndices = new Set(activeMonths.map(m => m.index));
+
     let totalGoal = 0;
     let collectedSoFar = 0;
     const memberContributions = {};
@@ -162,21 +179,26 @@ export const AppProvider = ({ children }) => {
       memberContributions[m.id] = { name: m.name, value: 0 };
     });
 
-    // Only consider ledger keys for the currentYear
+    // Total Goal = ₹100/member/active-month + flat ₹250 birthday bonus per member per year
+    // Birthday bonus is always ₹250 per person regardless of which month their birthday falls in
+    totalGoal = (members.length * activeMonths.length * 100) + (members.length * 250);
+
+    // Collected So Far = sum of paid entries in active months only
     Object.keys(ledger).forEach(key => {
       const parts = key.split('_');
       const yearPart = parseInt(parts[0], 10);
       if (yearPart !== currentYear) return;
 
+      const monthIndex = parseInt(parts[2], 10);
+      if (!activeMonthIndices.has(monthIndex)) return; // skip inactive months
+
       const memberId = parts[1];
       const entry = ledger[key];
-      const entryTotal = entry.base + Number(entry.birthday);
-      totalGoal += entryTotal;
-
       if (entry.status === 'Paid') {
-        collectedSoFar += entryTotal;
+        const paid = entry.base + Number(entry.birthday);
+        collectedSoFar += paid;
         if (memberContributions[memberId]) {
-          memberContributions[memberId].value += entryTotal;
+          memberContributions[memberId].value += paid;
         }
       }
     });
@@ -184,8 +206,20 @@ export const AppProvider = ({ children }) => {
     const percentAchieved = totalGoal > 0 ? (collectedSoFar / totalGoal) * 100 : 0;
     const pieChartData = Object.values(memberContributions).filter(m => m.value > 0);
 
-    return { totalGoal, collectedSoFar, percentAchieved, pieChartData };
-  }, [ledger, members, currentYear]);
+    // Temple Fund Total for the current year
+    const totalTempleFund = templeFunds
+      .filter(tf => tf.year === currentYear)
+      .reduce((sum, tf) => sum + tf.amount, 0);
+
+    // Total Expenses for the current year
+    const totalExpenses = expenses
+      .filter(e => e.year === currentYear)
+      .reduce((sum, e) => sum + e.amount, 0);
+
+    const availableAmount = collectedSoFar - totalExpenses + totalTempleFund;
+
+    return { totalGoal, collectedSoFar, percentAchieved, pieChartData, totalTempleFund, totalExpenses, availableAmount };
+  }, [ledger, members, currentYear, templeFunds, expenses]);
 
   // ── Expenses ──────────────────────────────────────────────────────────────
   const currentYearExpenses = useMemo(
@@ -223,8 +257,49 @@ export const AppProvider = ({ children }) => {
       members, monthsList,
       ledger, updateLedger,
       availableYears, currentYear, setCurrentYear, addYear,
+      displayMonths,
       addMember, editMember, deleteMember,
       expenses: currentYearExpenses, addExpense, deleteExpense,
+      templeFunds: templeFunds.filter(tf => tf.year === currentYear), 
+      addTempleFund: async ({ memberId, memberName, amount, date }) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/temple-funds`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ memberId, memberName, amount, date, year: currentYear })
+          });
+          const data = await res.json();
+          if (data.success) setTempleFunds(prev => [...prev, data.fund]);
+        } catch (err) {
+          console.error('Failed to add temple fund:', err);
+        }
+      },
+      editTempleFund: async (id, payload) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/temple-funds/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (data.success) {
+            setTempleFunds(prev => prev.map(tf => tf.id === id ? data.fund : tf));
+          }
+        } catch (err) {
+          console.error('Failed to edit temple fund:', err);
+        }
+      },
+      deleteTempleFund: async (id) => {
+        try {
+          const res = await fetch(`${API_BASE}/api/temple-funds/${id}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            setTempleFunds(prev => prev.filter(tf => tf.id !== id));
+          }
+        } catch (err) {
+          console.error('Failed to delete temple fund:', err);
+        }
+      },
       metrics, loading
     }}>
       {children}

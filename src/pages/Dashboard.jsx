@@ -16,6 +16,7 @@ import {
   IconButton,
   Chip,
   Avatar,
+  MenuItem,
 } from "@mui/material";
 import {
   PieChart,
@@ -25,7 +26,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
-import { useAppContext, monthsList } from "../context/AppContext";
+import { useAppContext } from "../context/AppContext";
 import ManageMembersDialog from "../components/ManageMembersDialog";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
@@ -34,6 +35,8 @@ import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
 import SavingsIcon from "@mui/icons-material/Savings";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ChurchIcon from "@mui/icons-material/Church"; // Using Church as a fallback for Temple if needed, or stick to AccountBalance
+import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
 
 // Modern Palette for the Pie Chart
 const COLORS = [
@@ -115,23 +118,37 @@ const Dashboard = () => {
     metrics,
     isAdmin,
     currentYear,
+    displayMonths,
     expenses,
     addExpense,
     deleteExpense,
+    templeFunds,
+    addTempleFund,
+    deleteTempleFund,
   } = useAppContext();
   const [manageOpen, setManageOpen] = useState(false);
+  
+  // Expense Form State
   const [expName, setExpName] = useState("");
   const [expAmount, setExpAmount] = useState("");
   const [expDate, setExpDate] = useState(
     new Date().toISOString().split("T")[0],
   );
 
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const availableBalance = metrics.collectedSoFar - totalExpenses;
+  // Temple Fund Form State
+  const [tfMemberId, setTfMemberId] = useState("");
+  const [tfAmount, setTfAmount] = useState("");
+  const [tfDate, setTfDate] = useState(
+    new Date().toISOString().split("T")[0],
+  );
+
+  const totalExpenses = metrics.totalExpenses;
+  const totalTempleFund = metrics.totalTempleFund;
+  const availableBalance = metrics.availableAmount;
 
   const getMemberGrandTotal = (memberId) => {
     let total = 0;
-    monthsList.forEach((_, monthIndex) => {
+    displayMonths.forEach(({ index: monthIndex }) => {
       const entry = ledger[`${currentYear}_${memberId}_${monthIndex}`];
       if (entry && entry.status === "Paid") {
         total += entry.base + Number(entry.birthday);
@@ -142,11 +159,11 @@ const Dashboard = () => {
 
   const getMemberProgress = (memberId) => {
     let paidMonths = 0;
-    monthsList.forEach((_, monthIndex) => {
+    displayMonths.forEach(({ index: monthIndex }) => {
       const entry = ledger[`${currentYear}_${memberId}_${monthIndex}`];
       if (entry && entry.status === "Paid") paidMonths++;
     });
-    return (paidMonths / 12) * 100;
+    return (paidMonths / displayMonths.length) * 100;
   };
 
   return (
@@ -222,11 +239,18 @@ const Dashboard = () => {
           delay={0.2}
         />
         <SummaryCard
+          title="Temple Fund"
+          value={totalTempleFund}
+          icon={<AccountBalanceIcon />}
+          gradient="linear-gradient(135deg, #00B8D4 0%, #00838F 100%)"
+          delay={0.3}
+        />
+        <SummaryCard
           title="Available Balance"
           value={availableBalance}
           icon={<SavingsIcon />}
           gradient="linear-gradient(135deg, #00E676 0%, #00C853 100%)"
-          delay={0.3}
+          delay={0.4}
         />
       </Box>
 
@@ -502,6 +526,212 @@ const Dashboard = () => {
         </Card>
       </Box>
 
+      {/* ── 3. Bottom Section: Temple Fund Management ─────────────────────── */}
+      <Box sx={{ mb: 4 }}>
+        <Card sx={{ display: "flex", flexDirection: "column" }}>
+          <CardContent
+            sx={{
+              p: "0 !important",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
+            <Box
+              sx={{
+                p: 3,
+                borderBottom: "1px solid #E2E8F0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "rgba(248, 250, 252, 0.5)",
+              }}
+            >
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    backgroundColor: "info.light",
+                    borderRadius: 2,
+                    p: 1,
+                    color: "info.main",
+                    display: "flex",
+                  }}
+                >
+                  <AccountBalanceIcon />
+                </Box>
+                <Typography
+                  variant="h6"
+                  sx={{ fontWeight: 700, color: "primary.main" }}
+                >
+                  Temple Fund Records
+                </Typography>
+              </Box>
+            </Box>
+
+            {isAdmin && (
+              <Box
+                sx={{
+                  p: 2,
+                  borderBottom: "1px solid #E2E8F0",
+                  backgroundColor: "#fff",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    select
+                    label="Member"
+                    value={tfMemberId}
+                    onChange={(e) => setTfMemberId(e.target.value)}
+                    sx={{ flex: 2, minWidth: 200 }}
+                  >
+                    {members.map((m) => (
+                      <MenuItem key={m.id} value={m.id}>
+                        {m.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    size="small"
+                    label="Amount (₹)"
+                    type="number"
+                    value={tfAmount}
+                    onChange={(e) => setTfAmount(e.target.value)}
+                    sx={{ flex: 1, minWidth: 100 }}
+                    inputProps={{ min: 0 }}
+                  />
+                  <TextField
+                    size="small"
+                    type="date"
+                    label="Date"
+                    value={tfDate}
+                    onChange={(e) => setTfDate(e.target.value)}
+                    sx={{ flex: 1, minWidth: 140 }}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <Button
+                    variant="contained"
+                    color="info"
+                    startIcon={<AddIcon />}
+                    disabled={!tfMemberId || !tfAmount}
+                    onClick={async () => {
+                      const selMember = members.find(m => m.id === tfMemberId);
+                      await addTempleFund({
+                        memberId: tfMemberId,
+                        memberName: selMember?.name || "Unknown",
+                        amount: Number(tfAmount),
+                        date: tfDate,
+                      });
+                      setTfMemberId("");
+                      setTfAmount("");
+                    }}
+                    sx={{ borderRadius: 2, boxShadow: "none", color: "#fff" }}
+                  >
+                    Add Fund
+                  </Button>
+                </Box>
+              </Box>
+            )}
+
+            <Box sx={{ p: 2 }}>
+              {templeFunds.length === 0 ? (
+                <Box
+                  sx={{ py: 6, textAlign: "center", color: "text.secondary" }}
+                >
+                  No temple fund records for {currentYear}.
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: {
+                      xs: "1fr",
+                      sm: "repeat(2, 1fr)",
+                      md: "repeat(3, 1fr)",
+                      xl: "repeat(4, 1fr)",
+                    },
+                    gap: 2,
+                  }}
+                >
+                  {templeFunds.map((tf) => (
+                    <Box
+                      key={tf.id}
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        p: 2,
+                        borderRadius: 3,
+                        border: "1px solid #E2E8F0",
+                        backgroundColor: "#F8FAFC",
+                        transition: "all 0.2s",
+                        "&:hover": {
+                          backgroundColor: "#fff",
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                          borderColor: "info.light",
+                        },
+                      }}
+                    >
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 600, color: "text.primary" }}
+                        >
+                          {tf.memberName}
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 1, alignItems: "center" }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: "text.secondary", fontWeight: 500 }}
+                          >
+                            {new Date(tf.date).toLocaleDateString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 2 }}
+                      >
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 800, color: "info.main" }}
+                        >
+                          ₹{tf.amount.toLocaleString()}
+                        </Typography>
+                        {isAdmin && (
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => deleteTempleFund(tf.id)}
+                            sx={{
+                              backgroundColor: "rgba(255,23,68,0.05)",
+                              "&:hover": {
+                                backgroundColor: "rgba(255,23,68,0.1)",
+                              },
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </CardContent>
+        </Card>
+      </Box>
+
       {/* ── 3. Bottom Section: Master Consolidation View ───────────────── */}
       <Card sx={{ overflow: "hidden" }}>
         <CardContent sx={{ p: "0 !important" }}>
@@ -537,7 +767,7 @@ const Dashboard = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ minWidth: 200, pl: 3 }}>Member</TableCell>
-                  {monthsList.map((m, i) => (
+                  {displayMonths.map(({ name: m, index: i }) => (
                     <TableCell
                       key={i}
                       align="center"
@@ -647,7 +877,7 @@ const Dashboard = () => {
                           </Box>
                         </Box>
                       </TableCell>
-                      {monthsList.map((_, i) => {
+                      {displayMonths.map(({ index: i }) => {
                         const entry =
                           ledger[`${currentYear}_${member.id}_${i}`];
                         const isPaid = entry && entry.status === "Paid";
@@ -816,7 +1046,7 @@ const Dashboard = () => {
                         gap: 1,
                       }}
                     >
-                      {monthsList.map((m, i) => {
+                      {displayMonths.map(({ name: m, index: i }) => {
                         const entry = ledger[
                           `${currentYear}_${member.id}_${i}`
                         ] || { status: "Pending", base: 100, birthday: 0 };

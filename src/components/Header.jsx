@@ -79,11 +79,11 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
             easing: theme.transitions.easing.sharp,
             duration: theme.transitions.duration.enteringScreen,
           }),
-          backgroundColor: { xs: '#0F172A', md: 'background.paper' },
+          backgroundColor: { xs: '#292929ff', md: 'background.paper' },
         }}
       >
         <Toolbar sx={{ display: 'flex', justifyContent: 'space-between', py: 1, gap: 1, minHeight: { xs: 56, sm: 64 } }}>
-          
+
           {/* Mobile View */}
           {isMobile ? (
             <>
@@ -129,10 +129,10 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
                       B
                     </Typography>
                   </Box>
-                  <Typography 
-                    variant="subtitle1" 
-                    sx={{ 
-                      fontWeight: 800, 
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 800,
                       color: '#fff',
                       letterSpacing: 0.5,
                       whiteSpace: 'nowrap'
@@ -149,8 +149,8 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
                   <Select
                     value={currentYear}
                     onChange={(e) => setCurrentYear(e.target.value)}
-                    sx={{ 
-                      borderRadius: 2, 
+                    sx={{
+                      borderRadius: 2,
                       fontWeight: 600,
                       color: '#fff',
                       '& .MuiOutlinedInput-notchedOutline': {
@@ -166,7 +166,7 @@ const Header = ({ onMenuClick, drawerWidth = 240, collapsed }) => {
                     ))}
                   </Select>
                 </FormControl>
-                
+
                 {isAdmin && (
                   <IconButton
                     color="error"

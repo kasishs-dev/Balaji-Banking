@@ -16,16 +16,18 @@ import {
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useNavigate, useLocation } from "react-router-dom";
-import { monthsList } from "../context/AppContext";
+import { getMonthsForYear } from "../context/AppContext";
+import { useAppContext } from "../context/AppContext";
 
 const DrawerContent = ({ onItemClick, collapsed, isMobile }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { currentYear } = useAppContext();
 
   const menuItems = [
     { title: "Dashboard Overview", path: "/", icon: <DashboardIcon /> },
-    ...monthsList.map((month, index) => ({
-      title: month,
+    ...getMonthsForYear(currentYear).map(({ name, index }) => ({
+      title: name,
       path: `/month/${index}`,
       icon: <CalendarMonthIcon />,
     })),

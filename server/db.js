@@ -53,8 +53,26 @@ const availableYearSchema = new mongoose.Schema({
   year: { type: Number, required: true, unique: true }
 });
 
+const templeFundSchema = new mongoose.Schema({
+  memberId:   { type: String, required: true },
+  memberName: { type: String, required: true },
+  amount:     { type: Number, required: true },
+  date:       { type: String, required: true },
+  year:       { type: Number, required: true }
+});
+templeFundSchema.set('toJSON', {
+  virtuals: true,
+  transform: (doc, ret) => {
+    ret.id = ret._id.toString();
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
+
 export const Member = mongoose.model('Member', memberSchema);
 export const Expense = mongoose.model('Expense', expenseSchema);
+export const TempleFund = mongoose.model('TempleFund', templeFundSchema);
 export const Ledger = mongoose.model('Ledger', ledgerSchema);
 export const AvailableYear = mongoose.model('AvailableYear', availableYearSchema);
 
