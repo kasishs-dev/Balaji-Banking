@@ -16,8 +16,8 @@ import {
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getMonthsForYear } from "../context/AppContext";
 import { useAppContext } from "../context/AppContext";
+import { getMonthsForYear } from "../utils/dateUtils";
 
 const DrawerContent = ({ onItemClick, collapsed, isMobile }) => {
   const navigate = useNavigate();

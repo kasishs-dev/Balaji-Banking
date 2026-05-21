@@ -1,19 +1,8 @@
 import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
 import API_BASE from '../config';
+import { monthsList, getMonthsForYear } from '../utils/dateUtils';
 
 const AppContext = createContext();
-
-export const monthsList = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
-];
-
-// Returns [{name, index}] for months visible in a given year.
-// For 2026 the group started in April, so only show April–December.
-export const getMonthsForYear = (year) => {
-  const startIndex = year === 2026 ? 3 : 0; // 3 = April
-  return monthsList.slice(startIndex).map((name, i) => ({ name, index: startIndex + i }));
-};
 
 export const AppProvider = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(() => {
@@ -260,18 +249,25 @@ export const AppProvider = ({ children }) => {
       displayMonths,
       addMember, editMember, deleteMember,
       expenses: currentYearExpenses, addExpense, deleteExpense,
-      templeFunds: templeFunds.filter(tf => tf.year === currentYear), 
+      templeFunds: (templeFunds || []).filter(tf => tf.year === currentYear),
       addTempleFund: async ({ memberId, memberName, amount, date }) => {
         try {
+          const targetYear = currentYear || new Date().getFullYear();
+          const payload = { memberId, memberName, amount, date, year: targetYear };
+          console.log('Sending Temple Fund payload:', payload);
           const res = await fetch(`${API_BASE}/api/temple-funds`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ memberId, memberName, amount, date, year: currentYear })
+            body: JSON.stringify(payload)
           });
           const data = await res.json();
-          if (data.success) setTempleFunds(prev => [...prev, data.fund]);
+          if (data.success) {
+            setTempleFunds(prev => [...prev, data.fund]);
+          } else {
+            console.error('Server rejected temple fund:', data.error);
+          }
         } catch (err) {
-          console.error('Failed to add temple fund:', err);
+          console.error('Failed to add temple fund (fetch error):', err);
         }
       },
       editTempleFund: async (id, payload) => {

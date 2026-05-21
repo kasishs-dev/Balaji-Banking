@@ -127,7 +127,7 @@ const Dashboard = () => {
     deleteTempleFund,
   } = useAppContext();
   const [manageOpen, setManageOpen] = useState(false);
-  
+
   // Expense Form State
   const [expName, setExpName] = useState("");
   const [expAmount, setExpAmount] = useState("");
@@ -136,7 +136,7 @@ const Dashboard = () => {
   );
 
   // Temple Fund Form State
-  const [tfMemberId, setTfMemberId] = useState("");
+  const [tfMemberName, setTfMemberName] = useState("");
   const [tfAmount, setTfAmount] = useState("");
   const [tfDate, setTfDate] = useState(
     new Date().toISOString().split("T")[0],
@@ -585,18 +585,11 @@ const Dashboard = () => {
                 >
                   <TextField
                     size="small"
-                    select
-                    label="Member"
-                    value={tfMemberId}
-                    onChange={(e) => setTfMemberId(e.target.value)}
+                    label="Member Name"
+                    value={tfMemberName}
+                    onChange={(e) => setTfMemberName(e.target.value)}
                     sx={{ flex: 2, minWidth: 200 }}
-                  >
-                    {members.map((m) => (
-                      <MenuItem key={m.id} value={m.id}>
-                        {m.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  />
                   <TextField
                     size="small"
                     label="Amount (₹)"
@@ -619,16 +612,15 @@ const Dashboard = () => {
                     variant="contained"
                     color="info"
                     startIcon={<AddIcon />}
-                    disabled={!tfMemberId || !tfAmount}
+                    disabled={!tfMemberName.trim() || !tfAmount}
                     onClick={async () => {
-                      const selMember = members.find(m => m.id === tfMemberId);
                       await addTempleFund({
-                        memberId: tfMemberId,
-                        memberName: selMember?.name || "Unknown",
+                        memberId: "", // Not linked to a specific member ID record anymore for simplicity/outsiders
+                        memberName: tfMemberName.trim(),
                         amount: Number(tfAmount),
                         date: tfDate,
                       });
-                      setTfMemberId("");
+                      setTfMemberName("");
                       setTfAmount("");
                     }}
                     sx={{ borderRadius: 2, boxShadow: "none", color: "#fff" }}

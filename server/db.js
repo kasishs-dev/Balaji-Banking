@@ -54,7 +54,7 @@ const availableYearSchema = new mongoose.Schema({
 });
 
 const templeFundSchema = new mongoose.Schema({
-  memberId:   { type: String, required: true },
+  memberId:   { type: String }, // Optional for outsiders
   memberName: { type: String, required: true },
   amount:     { type: Number, required: true },
   date:       { type: String, required: true },

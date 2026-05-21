@@ -1,7 +1,8 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { Box, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Select, MenuItem, Chip } from '@mui/material';
-import { useAppContext, monthsList } from '../context/AppContext';
+import { useAppContext } from '../context/AppContext';
+import { monthsList } from '../utils/dateUtils';
 
 const MonthView = () => {
   const { monthId } = useParams();

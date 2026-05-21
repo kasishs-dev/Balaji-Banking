@@ -110,10 +110,11 @@ app.get('/api/temple-funds', async (req, res) => {
 // ── POST add a temple fund entry ──────────────────────────────────────────────
 app.post('/api/temple-funds', async (req, res) => {
   try {
+    console.log('POST /api/temple-funds body:', req.body);
     const { memberId, memberName, amount, date, year } = req.body;
-    if (!memberId || !memberName || amount === undefined || !year) {
-      return res.status(400).json({ error: 'memberId, memberName, amount, and year are required' });
-    }
+    if (!memberName) return res.status(400).json({ error: 'memberName is required' });
+    if (amount === undefined || isNaN(Number(amount))) return res.status(400).json({ error: 'valid amount is required' });
+    if (!year) return res.status(400).json({ error: 'year is required' });
     const entry = await TempleFund.create({
       memberId,
       memberName,
