@@ -37,6 +37,9 @@ import SavingsIcon from "@mui/icons-material/Savings";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import ChurchIcon from "@mui/icons-material/Church"; // Using Church as a fallback for Temple if needed, or stick to AccountBalance
 import PeopleAltIcon from "@mui/icons-material/PeopleAlt";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
+import { exportMasterLedger, parseLedgerExcel } from "../utils/excelUtils";
 
 // Modern Palette for the Pie Chart
 const COLORS = [
@@ -125,6 +128,10 @@ const Dashboard = () => {
     templeFunds,
     addTempleFund,
     deleteTempleFund,
+    bulkUpdateLedger,
+    availableYears,
+    allExpenses,
+    allTempleFunds,
   } = useAppContext();
   const [manageOpen, setManageOpen] = useState(false);
 
@@ -166,6 +173,8 @@ const Dashboard = () => {
     return (paidMonths / displayMonths.length) * 100;
   };
 
+
+
   return (
     <Box sx={{ pb: 4 }}>
       <Box
@@ -193,21 +202,37 @@ const Dashboard = () => {
             Overview of the bank's financial health.{" "}
           </Typography>
         </Box>
-        {isAdmin && (
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setManageOpen(true)}
-            sx={{
-              color: "primary.dark",
-              whiteSpace: "nowrap",
-              fontWeight: 700,
-              borderRadius: 2,
-            }}
-          >
-            Manage Members
-          </Button>
-        )}
+        <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          {isAdmin && (
+            <>
+              <Button
+                variant="outlined"
+                color="primary"
+                startIcon={<FileDownloadIcon />}
+                onClick={() => exportMasterLedger(availableYears, members, ledger, allExpenses, allTempleFunds, metrics)}
+                sx={{
+                  fontWeight: 700,
+                  borderRadius: 2,
+                }}
+              >
+                Export All Data
+              </Button>
+              <Button
+                variant="contained"
+                color="secondary"
+                onClick={() => setManageOpen(true)}
+                sx={{
+                  color: "primary.dark",
+                  whiteSpace: "nowrap",
+                  fontWeight: 700,
+                  borderRadius: 2,
+                }}
+              >
+                Manage Members
+              </Button>
+            </>
+          )}
+        </Box>
       </Box>
 
       <ManageMembersDialog
@@ -251,6 +276,20 @@ const Dashboard = () => {
           icon={<SavingsIcon />}
           gradient="linear-gradient(135deg, #00E676 0%, #00C853 100%)"
           delay={0.4}
+        />
+        <SummaryCard
+          title="Collected (All Years)"
+          value={metrics.allTimeCollected}
+          icon={<TrendingUpIcon />}
+          gradient="linear-gradient(135deg, #FF9800 0%, #E65100 100%)"
+          delay={0.5}
+        />
+        <SummaryCard
+          title="Available (All Years)"
+          value={metrics.allTimeAvailable}
+          icon={<AccountBalanceWalletIcon />}
+          gradient="linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)"
+          delay={0.6}
         />
       </Box>
 

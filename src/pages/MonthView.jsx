@@ -1,19 +1,40 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Select, MenuItem, Chip } from '@mui/material';
+import { Box, Typography, Card, CardContent, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TextField, Select, MenuItem, Chip, Button } from '@mui/material';
 import { useAppContext } from '../context/AppContext';
 import { monthsList } from '../utils/dateUtils';
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
+import { exportMonthlyLedger, parseLedgerExcel } from "../utils/excelUtils";
 
 const MonthView = () => {
   const { monthId } = useParams();
   const monthIndex = parseInt(monthId, 10);
   const monthName = monthsList[monthIndex];
   
-  const { members, ledger, updateLedger, isAdmin, currentYear } = useAppContext();
+  const { members, ledger, updateLedger, isAdmin, currentYear, bulkUpdateLedger } = useAppContext();
 
   if (isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
     return <Typography>Invalid Month</Typography>;
   }
+
+  const handleImportExcel = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const updates = await parseLedgerExcel(file);
+      const res = await bulkUpdateLedger(updates);
+      if (res.success) {
+        alert("Data imported successfully!");
+      } else {
+        alert("Failed to import data: " + res.error);
+      }
+    } catch (err) {
+      console.error("Import error:", err);
+      alert("Error reading Excel file. Please ensure it follows the template format.");
+    }
+  };
 
   const handleBirthdayChange = (memberId, value) => {
     const numValue = value === '' ? 0 : Number(value);
@@ -48,15 +69,49 @@ const MonthView = () => {
     updateLedger(memberId, monthIndex, 'source', value);
   };
 
+  const currentMonth = { name: monthName, index: monthIndex };
+
   return (
     <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
-          {monthName} Collection
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Detailed view of contributions for {monthName} {currentYear}.
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 700 }}>
+            {monthName} Collection
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Detailed view of contributions for {monthName} {currentYear}.
+          </Typography>
+        </Box>
+        {isAdmin && (
+          <Box sx={{ display: 'flex', gap: 1.5 }}>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              startIcon={<FileDownloadIcon />}
+              onClick={() => exportMonthlyLedger(currentYear, currentMonth, members, ledger)}
+              sx={{ fontWeight: 700, borderRadius: 2 }}
+            >
+              Export Month
+            </Button>
+            <Button
+              variant="outlined"
+              color="primary"
+              size="small"
+              component="label"
+              startIcon={<FileUploadIcon />}
+              sx={{ fontWeight: 700, borderRadius: 2 }}
+            >
+              Import Month
+              <input
+                type="file"
+                hidden
+                accept=".xlsx, .xls"
+                onChange={handleImportExcel}
+              />
+            </Button>
+          </Box>
+        )}
       </Box>
 
       <Card sx={{ overflow: 'hidden' }}>

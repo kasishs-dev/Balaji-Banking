@@ -72,6 +72,25 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const bulkUpdateLedger = async (updates) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/ledger/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLedger(data.ledger);
+        return { success: true };
+      }
+      return { success: false, error: data.error };
+    } catch (error) {
+      console.error('Failed to bulk update ledger:', error);
+      return { success: false, error: 'Network error' };
+    }
+  };
+
   // ── Add a new year ────────────────────────────────────────────────────────
   const addYear = async (year) => {
     try {
@@ -162,6 +181,7 @@ export const AppProvider = ({ children }) => {
 
     let totalGoal = 0;
     let collectedSoFar = 0;
+    let allTimeCollected = 0;
     const memberContributions = {};
 
     members.forEach(m => {
@@ -172,22 +192,36 @@ export const AppProvider = ({ children }) => {
     // Birthday bonus is always ₹250 per person regardless of which month their birthday falls in
     totalGoal = (members.length * activeMonths.length * 100) + (members.length * 250);
 
-    // Collected So Far = sum of paid entries in active months only
+    // Cache active months for each year
+    const activeMonthsByYear = {};
+
+    // Collected logic
     Object.keys(ledger).forEach(key => {
       const parts = key.split('_');
       const yearPart = parseInt(parts[0], 10);
-      if (yearPart !== currentYear) return;
-
-      const monthIndex = parseInt(parts[2], 10);
-      if (!activeMonthIndices.has(monthIndex)) return; // skip inactive months
-
       const memberId = parts[1];
+      const monthIndex = parseInt(parts[2], 10);
       const entry = ledger[key];
+
       if (entry.status === 'Paid') {
         const paid = entry.base + Number(entry.birthday);
-        collectedSoFar += paid;
-        if (memberContributions[memberId]) {
-          memberContributions[memberId].value += paid;
+        
+        // Use cached active months or compute
+        if (!activeMonthsByYear[yearPart]) {
+          activeMonthsByYear[yearPart] = new Set(getMonthsForYear(yearPart).map(m => m.index));
+        }
+
+        if (activeMonthsByYear[yearPart].has(monthIndex)) {
+          // Always add to all-time if it's an active month for that year
+          allTimeCollected += paid;
+
+          // Current year specific logic
+          if (yearPart === currentYear) {
+            collectedSoFar += paid;
+            if (memberContributions[memberId]) {
+              memberContributions[memberId].value += paid;
+            }
+          }
         }
       }
     });
@@ -199,15 +233,36 @@ export const AppProvider = ({ children }) => {
     const totalTempleFund = templeFunds
       .filter(tf => tf.year === currentYear)
       .reduce((sum, tf) => sum + tf.amount, 0);
+    
+    // All-time Temple Fund
+    const allTimeTempleFund = (templeFunds || [])
+      .reduce((sum, tf) => sum + tf.amount, 0);
 
     // Total Expenses for the current year
     const totalExpenses = expenses
       .filter(e => e.year === currentYear)
       .reduce((sum, e) => sum + e.amount, 0);
+    
+    // All-time Expenses
+    const allTimeExpenses = (expenses || [])
+      .reduce((sum, e) => sum + e.amount, 0);
 
     const availableAmount = collectedSoFar - totalExpenses + totalTempleFund;
+    const allTimeAvailable = allTimeCollected - allTimeExpenses + allTimeTempleFund;
 
-    return { totalGoal, collectedSoFar, percentAchieved, pieChartData, totalTempleFund, totalExpenses, availableAmount };
+    return { 
+      totalGoal, 
+      collectedSoFar, 
+      percentAchieved, 
+      pieChartData, 
+      totalTempleFund, 
+      totalExpenses, 
+      availableAmount,
+      allTimeCollected,
+      allTimeTempleFund,
+      allTimeExpenses,
+      allTimeAvailable 
+    };
   }, [ledger, members, currentYear, templeFunds, expenses]);
 
   // ── Expenses ──────────────────────────────────────────────────────────────
@@ -249,6 +304,9 @@ export const AppProvider = ({ children }) => {
       displayMonths,
       addMember, editMember, deleteMember,
       expenses: currentYearExpenses, addExpense, deleteExpense,
+      allExpenses: expenses,
+      allTempleFunds: templeFunds,
+      bulkUpdateLedger,
       templeFunds: (templeFunds || []).filter(tf => tf.year === currentYear),
       addTempleFund: async ({ memberId, memberName, amount, date }) => {
         try {

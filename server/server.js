@@ -246,6 +246,46 @@ app.post('/api/ledger', async (req, res) => {
   }
 });
 
+// ── POST bulk update ledger entries ──────────────────────────────────────────
+app.post('/api/ledger/bulk', async (req, res) => {
+  try {
+    const { updates } = req.body; // Array of { year, memberId, monthIndex, updates: { base, birthday, status, source, paidDate } }
+    if (!updates || !Array.isArray(updates)) {
+      return res.status(400).json({ error: 'updates array is required' });
+    }
+
+    const bulkOps = updates.map(op => ({
+      updateOne: {
+        filter: { year: op.year, memberId: op.memberId.toString(), monthIndex: op.monthIndex },
+        update: { $set: op.updates },
+        upsert: true
+      }
+    }));
+
+    if (bulkOps.length > 0) {
+      await Ledger.bulkWrite(bulkOps);
+    }
+
+    // Return the updated ledger for sync
+    const ledgerRaw = await Ledger.find();
+    const ledger = {};
+    for (const row of ledgerRaw) {
+      ledger[`${row.year}_${row.memberId}_${row.monthIndex}`] = {
+        base: row.base,
+        birthday: row.birthday,
+        status: row.status,
+        source: row.source,
+        paidDate: row.paidDate
+      };
+    }
+
+    res.json({ success: true, ledger });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
 // ── POST add a new member ─────────────────────────────────────────────────────
 app.post('/api/members', async (req, res) => {
   try {
