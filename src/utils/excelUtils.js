@@ -4,6 +4,16 @@ import * as XLSX from 'xlsx';
  * Generates an Excel template for a SPECIFIC month of a given year.
  */
 export const exportMonthlyLedger = (year, month, members, ledger) => {
+  const formatDateForExcel = (dateStr) => {
+    if (!dateStr) return '';
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      return `${m}/${d}/${y}`;
+    }
+    return dateStr;
+  };
+
   const data = members.map(member => {
     const key = `${year}_${member.id}_${month.index}`;
     const entry = ledger[key] || { base: 100, birthday: 0, status: 'Pending', source: 'Cash' };
@@ -18,7 +28,7 @@ export const exportMonthlyLedger = (year, month, members, ledger) => {
       'Birthday Amount': entry.birthday,
       'Status': entry.status,
       'Source': entry.source,
-      'Payment Date': entry.paidDate || '',
+      'Payment Date': formatDateForExcel(entry.paidDate),
     };
   });
 
@@ -113,6 +123,19 @@ export const exportMasterLedger = (availableYears, members, ledger, expenses, te
       });
     }
 
+    const formatDateForExcel = (dateStr) => {
+      if (!dateStr) return '';
+      const [y, m, d] = dateStr.split('-');
+      return `${m}/${d}/${y}`;
+    };
+
+    // Explicitly format all dates for Dashboard-like appearance
+    sheetData.forEach(row => {
+      if (row['Payment Date']) {
+        row['Payment Date'] = formatDateForExcel(row['Payment Date']);
+      }
+    });
+
     const ws = XLSX.utils.json_to_sheet(sheetData);
     XLSX.utils.book_append_sheet(workbook, ws, `Year ${year}`);
     
@@ -121,6 +144,82 @@ export const exportMasterLedger = (availableYears, members, ledger, expenses, te
   });
 
   XLSX.writeFile(workbook, `Balaji_Banking_Full_Report.xlsx`);
+};
+
+/**
+ * Robustly parses a date from Excel (handles strings, serial numbers, and Date objects).
+ * Returns YYYY-MM-DD or null.
+ */
+const parseExcelDate = (val) => {
+  if (val === undefined || val === null || val === '') return null;
+
+  // 1. Handle Javascript Date objects
+  if (val instanceof Date) {
+    if (!isNaN(val.getTime())) {
+      const y = val.getFullYear();
+      const m = String(val.getMonth() + 1).padStart(2, '0');
+      const d = String(val.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return null;
+  }
+
+  // 2. Handle numeric input (even if it's a numeric string like "46170")
+  let numVal = typeof val === 'number' ? val : parseFloat(val);
+  // Check if it's a valid Excel serial number (around 40000-60000 for our dates)
+  if (!isNaN(numVal) && String(val).match(/^\d+(\.\d+)?$/)) {
+    const date = new Date(Math.round((numVal - 25569) * 864e5));
+    if (!isNaN(date.getTime())) {
+      // Use UTC to avoid timezone shifts for serial numbers
+      const y = date.getUTCFullYear();
+      const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const d = String(date.getUTCDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  }
+
+  // 3. Handle Strings
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+
+    // Pattern: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+    // Pattern: MM/DD/YYYY or DD/MM/YYYY or M/D/YYYY
+    const parts = trimmed.split(/[/-]/);
+    if (parts.length === 3) {
+      let m, d, y;
+      if (parts[2].length === 4) { // .../.../YYYY
+        y = parts[2];
+        // Assume MM/DD/YYYY first (most common)
+        m = parts[0].padStart(2, '0');
+        d = parts[1].padStart(2, '0');
+      } else if (parts[0].length === 4) { // YYYY/.../...
+        y = parts[0];
+        m = parts[1].padStart(2, '0');
+        d = parts[2].padStart(2, '0');
+      }
+      
+      if (y && m && d) {
+        const check = new Date(`${y}-${m}-${d}`);
+        if (!isNaN(check.getTime())) return `${y}-${m}-${d}`;
+      }
+    }
+
+    // Last resort: native parsing ONLY if it doesn't look like a single number
+    if (!/^\d+$/.test(trimmed)) {
+      const date = new Date(trimmed);
+      if (!isNaN(date.getTime())) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+      }
+    }
+  }
+
+  return null;
 };
 
 /**
@@ -138,13 +237,16 @@ export const parseLedgerExcel = (file) => {
         const workbook = XLSX.read(data, { type: 'array' });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        
+        // Use cellDates: true to let SheetJS attempt date conversion if possible
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
 
         const updates = jsonData.map(row => {
           const status = String(row['Status'] || 'Pending');
-          let paidDate = row['Payment Date'] || null;
+          let rawDate = row['Payment Date'];
+          let paidDate = parseExcelDate(rawDate);
 
-          // Auto-set today's date if status is Paid but date is missing
+          // Auto-set today's date if status is Paid but date parsing failed/was empty
           if (status === 'Paid' && !paidDate) {
             paidDate = new Date().toISOString().split('T')[0];
           }

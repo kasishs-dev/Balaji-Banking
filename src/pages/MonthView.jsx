@@ -52,11 +52,17 @@ const MonthView = () => {
 
   const handleStatusChange = (memberId, value) => {
     updateLedger(memberId, monthIndex, 'status', value);
-    // Auto-set today's date when marking as Paid, clear when reverting to Pending
+    
+    const currentEntry = ledger[`${currentYear}_${memberId}_${monthIndex}`] || {};
+    
+    // Auto-set today's date ONLY if marking as Paid AND no date is already set
     if (value === 'Paid') {
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      updateLedger(memberId, monthIndex, 'paidDate', today);
+      if (!currentEntry.paidDate) {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        updateLedger(memberId, monthIndex, 'paidDate', today);
+      }
     } else {
+      // Clear date when reverting to Pending
       updateLedger(memberId, monthIndex, 'paidDate', null);
     }
   };
