@@ -17,6 +17,8 @@ import {
   Chip,
   Avatar,
   MenuItem,
+  useMediaQuery,
+  useTheme,
 } from "@mui/material";
 import {
   PieChart,
@@ -133,6 +135,10 @@ const Dashboard = () => {
     allExpenses,
     allTempleFunds,
   } = useAppContext();
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
   const [manageOpen, setManageOpen] = useState(false);
 
   // Expense Form State
@@ -319,9 +325,9 @@ const Dashboard = () => {
             >
               Contribution Share
             </Typography>
-            <Box sx={{ flexGrow: 1, minHeight: 320 }}>
+            <Box sx={{ flexGrow: 1, minHeight: { xs: 500, sm: 450 } }}>
               {metrics.pieChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height={isMobile ? 500 : 450}>
                   <PieChart>
                     <Pie
                       data={metrics.pieChartData}
@@ -351,7 +357,14 @@ const Dashboard = () => {
                     />
                     <Legend
                       iconType="circle"
-                      wrapperStyle={{ fontSize: "13px", fontWeight: 500 }}
+                      layout={isMobile ? "vertical" : "horizontal"}
+                      align="center"
+                      verticalAlign="bottom"
+                      wrapperStyle={{ 
+                        fontSize: "13px", 
+                        fontWeight: 500,
+                        paddingTop: isMobile ? "20px" : "0px"
+                      }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
